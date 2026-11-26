@@ -10,7 +10,7 @@ import { notifications } from '@mantine/notifications';
 import { IconClipboardCopy, IconExternalLink } from '@tabler/icons-react';
 import { Dispatch, SetStateAction } from 'react';
 import { Link } from 'react-router-dom';
-import { UploadProgress } from './useProgress';
+import { UploadFileEntry, UploadProgress } from './files';
 
 export type UploadHeadersOptions = {
   options: UploadOptionsStore['options'];
@@ -23,7 +23,7 @@ export type UploadHeadersOptions = {
 export type UploadHandlers = {
   setProgress: (o: UploadProgress) => void;
   setLoading?: Dispatch<SetStateAction<boolean>>;
-  setFiles: Dispatch<SetStateAction<File[]>>;
+  setFiles: Dispatch<SetStateAction<UploadFileEntry[]>>;
 };
 
 export type UploadContextHandlers = UploadHandlers & {

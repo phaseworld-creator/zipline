@@ -109,11 +109,6 @@ interface S3Auth {
   date: string;
 }
 
-interface S3Request extends Record<string, unknown> {
-  s3User?: { id: string; token: string; username: string };
-  s3Auth?: S3Auth;
-}
-
 function parseAuthHeader(authHeader: string): S3Auth {
   const parts = authHeader.replace('AWS4-HMAC-SHA256 ', '').split(', ');
   const result: Partial<S3Auth> = {};
@@ -162,7 +157,7 @@ function canonicalRequest(
   const sortedQuery = Object.entries(query)
     .filter(([k]) => k !== 'authorization')
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(Array.isArray(v) ? v[0] : v)}`)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(Array.isArray(v) ? v[0] : (v ?? ''))}`)
     .join('&');
 
   const canonicalHeaders = signedHeaders
@@ -214,7 +209,7 @@ function verifySignature(req: any, userSecret: string): boolean {
   return timingSafeEqual(Buffer.from(auth.signature), Buffer.from(expectedSignature));
 }
 
-async function handleListBuckets(req: S3Request, res: any) {
+async function handleListBuckets(req: any, res: any) {
   const user = req.s3User!;
   const userBuckets = await db
     .select({ id: users.id, createdAt: users.createdAt })
@@ -244,7 +239,7 @@ async function handleListBuckets(req: S3Request, res: any) {
 </ListAllMyBucketsResult>`);
 }
 
-async function handleCreateBucket(req: S3Request, res: any, bucket: string) {
+async function handleCreateBucket(req: any, res: any, bucket: string) {
   const user = req.s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot create bucket for another user');
@@ -252,7 +247,7 @@ async function handleCreateBucket(req: S3Request, res: any, bucket: string) {
   return res.status(200).header('Location', `/${bucket}`).send('');
 }
 
-async function handleDeleteBucket(req: S3Request, res: any, bucket: string) {
+async function handleDeleteBucket(req: any, res: any, bucket: string) {
   const user = req.s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot delete bucket for another user');
@@ -261,7 +256,7 @@ async function handleDeleteBucket(req: S3Request, res: any, bucket: string) {
   return res.status(204).send('');
 }
 
-async function handleHeadBucket(req: S3Request, res: any, bucket: string) {
+async function handleHeadBucket(req: any, res: any, bucket: string) {
   const user = req.s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot access bucket for another user');

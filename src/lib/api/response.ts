@@ -18,6 +18,7 @@ import { ApiServerStatusResponse } from '@/server/routes/api/server/status';
 import { ApiServerSettingsResponse, ApiServerSettingsWebResponse } from '@/server/routes/api/server/settings';
 import { ApiServerThemesResponse } from '@/server/routes/api/server/themes';
 import { ApiServerThumbnailsResponse } from '@/server/routes/api/server/thumbnails';
+import { ApiAnalyticsResponse } from '@/server/routes/api/server/analytics';
 import { ApiSetupResponse } from '@/server/routes/api/setup';
 import { ApiStatsResponse } from '@/server/routes/api/stats';
 import { ApiUploadResponse } from '@/server/routes/api/upload';
@@ -90,6 +91,7 @@ export type Response = {
   '/api/server/folder/[id]': ApiServerFolderResponse;
   '/api/server/themes': ApiServerThemesResponse;
   '/api/server/thumbnails': ApiServerThumbnailsResponse;
+  '/api/server/analytics': ApiAnalyticsResponse;
   '/api/server/import/v3': ApiServerImportV3;
   '/api/server/import/v4': ApiServerImportV4;
   '/api/healthcheck': ApiHealthcheckResponse;

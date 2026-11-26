@@ -148,7 +148,7 @@ export async function uploadPartialFiles(
 
           if (j === nChunks - 1) {
             uploadedFiles.push(...res.files);
-            setFiles((prev) => prev.filter((f) => f !== file));
+            setFiles((prev) => prev.filter((f) => f.file !== file));
           }
         }
       } catch (error) {

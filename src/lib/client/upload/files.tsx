@@ -7,6 +7,7 @@ import { notifications } from '@mantine/notifications';
 import { IconDeviceSdCard, IconFileUpload, IconFileXFilled } from '@tabler/icons-react';
 import { uploadPartialFiles } from './partial';
 import { UploadProgress } from './useProgress';
+export type { UploadProgress } from './useProgress';
 import {
   applyUploadHeaders,
   handleUploadResponse,
@@ -231,7 +232,7 @@ export async function uploadFiles(
 
       const res = await uploadBatch(batchFiles, completedBytes);
       uploadedFiles.push(...res.files);
-      setFiles((prev) => prev.filter((file) => !batchFiles.some((bf) => bf.file === file)));
+      setFiles((prev) => prev.filter((file) => !batchFiles.some((bf) => bf.file === file.file)));
 
       completedBytes += batchBytes;
       setProgress(tracker(completedBytes, aggBytes));

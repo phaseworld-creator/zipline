@@ -6,6 +6,10 @@
         "label": "Metrics",
         "description": "Instance-wide usage graphs and statistics"
       },
+      "analytics": {
+        "label": "Analytics",
+        "description": "Detailed instance analytics and user activity"
+      },
       "actions": {
         "label": "Actions",
         "description": "Maintenance tools and import/export"
@@ -32,6 +36,64 @@
     "version": {
       "title": "Version",
       "loadFailed": "Version information could not be loaded."
+    },
+    "analytics": {
+      "title": "Analytics",
+      "rangeModalTitle": "Select Date Range",
+      "changeRange": "Change Range",
+      "fromTo": "From {{from}} to {{to}}",
+      "allTime": "All Time",
+      "showAllTime": "Show All Time",
+      "viewingAllTime": "Viewing all time data",
+      "allTimeWarning": "Loading all time data may be slow",
+      "loading": "Loading analytics...",
+      "loadFailed": "Failed to load analytics",
+      "noData": "No data available",
+      "presets": {
+        "last7Days": "Last 7 Days",
+        "last30Days": "Last 30 Days",
+        "thisMonth": "This Month",
+        "lastMonth": "Last Month",
+        "thisYear": "This Year"
+      },
+      "storageTrend": "Storage Trend",
+      "fileTypes": "File Types",
+      "uploadPatterns": "Upload Patterns",
+      "byHour": "By Hour",
+      "byDay": "By Day",
+      "topUsers": "Top Users",
+      "byStorage": "By Storage",
+      "byFiles": "By Files",
+      "byViews": "By Views",
+      "userActivity": "User Activity",
+      "overview": {
+        "users": "Users",
+        "files": "Files",
+        "urls": "URLs",
+        "storage": "Storage",
+        "fileViews": "File Views",
+        "urlViews": "URL Views"
+      },
+      "columns": {
+        "user": "User",
+        "files": "Files",
+        "storage": "Storage",
+        "views": "Views",
+        "urls": "URLs",
+        "urlViews": "URL Views",
+        "lastActive": "Last Active"
+      },
+      "never": "Never",
+      "uploads": "Uploads",
+      "loading": "Loading...",
+      "unknownUser": "Anonymous",
+      "byCount": "By Count",
+      "byStorage": "By Storage",
+      "byFiles": "By Files",
+      "byViews": "By Views",
+      "storage": "Storage",
+      "files": "Files",
+      "close": "Close"
     }
   },
   "page": {

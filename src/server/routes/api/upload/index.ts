@@ -203,7 +203,7 @@ export default typedPlugin(
 
         // todo: maybe make configurable?
         const prepared = await mapConcurrent(filesBefore, 4, async (item, i) => {
-          const { file, extension, mimetype, originalName } = item;
+          const { file, extension, mimetype, originalName, relativePath } = item;
 
           // compress the image if requested
           let compressed;
@@ -293,8 +293,8 @@ export default typedPlugin(
           for (const [i, upload] of uploads.entries()) {
             let fileName: string;
             try {
-              if (upload.file.relativePath) {
-                fileName = await getFilenameFromRelativePath(upload.file.relativePath, upload.extension, tx);
+              if (upload.relativePath) {
+                fileName = await getFilenameFromRelativePath(upload.relativePath, upload.extension, tx);
               } else {
                 fileName = await getFilename(
                   format,

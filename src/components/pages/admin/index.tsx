@@ -3,7 +3,14 @@ import { LinksList } from '@/components/LinksList';
 import useLogin from '@/lib/client/hooks/useLogin';
 import { isAdministrator } from '@/lib/role';
 import { SimpleGrid, Title } from '@mantine/core';
-import { IconAdjustments, IconGraph, IconStopwatch, IconTags, IconUsersGroup } from '@tabler/icons-react';
+import {
+  IconAdjustments,
+  IconGraph,
+  IconStopwatch,
+  IconTags,
+  IconUsersGroup,
+  IconChartAreaLine,
+} from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { Version } from './parts/Version';
 import { Storage } from './parts/Storage';
@@ -22,6 +29,13 @@ export default function DashboardAdminHome() {
       show:
         config.features.metrics.enabled &&
         (!config.features.metrics.adminOnly || isAdministrator(user?.role)),
+    },
+    {
+      label: t('admin.links.analytics.label'),
+      description: t('admin.links.analytics.description'),
+      href: '/dashboard/admin/analytics',
+      icon: IconChartAreaLine,
+      show: true,
     },
     {
       label: t('admin.links.actions.label'),

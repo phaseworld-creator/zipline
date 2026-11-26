@@ -116,7 +116,7 @@ export async function getFilenameFromRelativePath(
     const sanitizedPath = relativePath
       .split('/')
       .map((part) => sanitizeFilename(part))
-      .filter((part) => part.length > 0)
+      .filter((part): part is string => part !== null && part.length > 0)
       .join('/');
 
     if (!sanitizedPath) throw 'invalid file name';
@@ -127,7 +127,7 @@ export async function getFilenameFromRelativePath(
       // Add a timestamp to make it unique
       const timestamp = Date.now().toString(36);
       const pathParts = sanitizedPath.split('/');
-      const fileName = pathParts.pop() || 'file';
+      const fileName = pathParts.pop() ?? 'file';
       const newFileName = `${fileName}-${timestamp}`;
       pathParts.push(newFileName);
       const newPath = pathParts.join('/');
