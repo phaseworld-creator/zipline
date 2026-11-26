@@ -17,6 +17,7 @@
     "openapi": "tsx scripts/openapi.ts",
     "db:prototype": "drizzle-kit push",
     "db:migrate": "drizzle-kit generate",
+    "release": "bash scripts/release.sh",
     "docker:engine": "colima start --mount $PWD/themes:w --mount $PWD/uploads:w --mount $PWD/public:w",
     "docker:compose:dev:build": "docker compose --file docker-compose.dev.yml build --build-arg ZIPLINE_GIT_SHA=$(git rev-parse HEAD)",
     "docker:compose:dev:up": "docker compose --file docker-compose.dev.yml up -d",

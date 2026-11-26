@@ -1,0 +1,110 @@
+name: 'Release'
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version bump type (patch, minor, major) or specific version (e.g., 4.9.0)'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      custom_version:
+        description: 'Custom version (if not using patch/minor/major)'
+        required: false
+        type: string
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(jq -r .version package.json)
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT_VERSION=${{ steps.current_version.outputs.version }}
+          BUMP_TYPE=${{ github.event.inputs.version }}
+          CUSTOM_VERSION=${{ github.event.inputs.custom_version }}
+
+          if [ -n "$CUSTOM_VERSION" ]; then
+            NEW_VERSION=$CUSTOM_VERSION
+          else
+            IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+            case $BUMP_TYPE in
+              patch)
+                PATCH=$((PATCH + 1))
+                ;;
+              minor)
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                ;;
+              major)
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                ;;
+            esac
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          fi
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update package.json version
+        run: |
+          jq --arg version "${{ steps.new_version.outputs.version }}" '.version = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+      - name: Build changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            CHANGELOG=$(git log --oneline --pretty=format:"- %s (%an)")
+          else
+            CHANGELOG=$(git log ${PREV_TAG}..HEAD --oneline --pretty=format:"- %s (%an)")
+          fi
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git add package.json
+          git commit -m "chore: release v${{ steps.new_version.outputs.version }}"
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ steps.new_version.outputs.version }}" -m "Release v${{ steps.new_version.outputs.version }}"
+          git push origin HEAD
+          git push origin "v${{ steps.new_version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          name: Release v${{ steps.new_version.outputs.version }}
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
