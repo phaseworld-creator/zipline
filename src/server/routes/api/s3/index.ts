@@ -98,7 +98,7 @@ export default typedPlugin(
       },
     });
   },
-  { name: PATH },
+  { name: PATH, prefix: PATH },
 );
 
 interface S3Auth {
