@@ -2,11 +2,12 @@ import { useCodeMap } from '@/components/ConfigProvider';
 import { useSettingsStore, type UploadBehavior } from '@/lib/client/store/settings';
 import { getPastedContent } from '@/lib/client/upload/paste';
 import { createTextFiles } from '@/lib/client/upload/text';
+import { isFolderDrop } from '@/lib/client/upload/folder';
 import { Stack, Text } from '@mantine/core';
 import { Dropzone } from '@mantine/dropzone';
 import { showNotification } from '@mantine/notifications';
-import { IconUpload } from '@tabler/icons-react';
-import { useCallback, useEffect } from 'react';
+import { IconUpload, IconFolder } from '@tabler/icons-react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/shallow';
@@ -26,10 +27,12 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const isUploadPage = location.pathname.startsWith('/dashboard/upload/');
-  const { setFiles, upload } = useFileUpload();
+  const { setFiles, upload, uploadFromDataTransfer } = useFileUpload();
   const [dropBehavior, pasteBehavior] = useSettingsStore(
     useShallow((state) => [state.settings.fileDropBehavior, state.settings.filePasteBehavior]),
   );
+
+  const dropRef = useRef<HTMLDivElement>(null);
 
   const receiveFiles = useCallback(
     (files: File[], behavior: UploadBehavior) => {
@@ -49,6 +52,37 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
       }
     },
     [isUploadPage, setFiles, upload, navigate, t],
+  );
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (isUploadPage || dropBehavior === 'disabled') return;
+
+      const dataTransfer = event.dataTransfer;
+      const isFolder = isFolderDrop(dataTransfer);
+
+      if (isFolder) {
+        uploadFromDataTransfer(dataTransfer);
+      } else {
+        const files = Array.from(dataTransfer.files);
+        receiveFiles(files, dropBehavior);
+      }
+    },
+    [isUploadPage, dropBehavior, receiveFiles, uploadFromDataTransfer],
+  );
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (!isUploadPage && dropBehavior !== 'disabled') {
+        event.dataTransfer.dropEffect = 'copy';
+      }
+    },
+    [isUploadPage, dropBehavior],
   );
 
   useEffect(() => {
@@ -90,21 +124,33 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
       {children}
 
       {!isUploadPage && dropBehavior !== 'disabled' && (
-        <Dropzone.FullScreen
-          onDrop={(files) => receiveFiles(files, dropBehavior)}
-          activateOnKeyboard={false}
-          acceptColor='dark'
+        <div
+          ref={dropRef}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none' }}
         >
-          <Stack align='center' gap='sm' style={{ pointerEvents: 'none' }}>
-            <IconUpload size='3.2rem' stroke={1.5} />
-            <Text size='xl' fw={500}>
-              {t(dropBehavior === 'upload' ? 'global.dropUpload' : 'global.dropReview')}
-            </Text>
-            <Text size='sm' c='dimmed'>
-              {t('global.savedOptions')}
-            </Text>
-          </Stack>
-        </Dropzone.FullScreen>
+          <Dropzone.FullScreen
+            onDrop={() => {}} // handled by handleDrop
+            onDragOver={() => {}} // handled by handleDragOver
+            activateOnKeyboard={false}
+            acceptColor='dark'
+          >
+            <Stack align='center' gap='sm' style={{ pointerEvents: 'none' }}>
+              <IconUpload size='3.2rem' stroke={1.5} />
+              <Text size='xl' fw={500}>
+                {t(dropBehavior === 'upload' ? 'global.dropUpload' : 'global.dropReview')}
+              </Text>
+              <Text size='sm' c='dimmed'>
+                {t('global.savedOptions')}
+              </Text>
+              <IconFolder size='1.5rem' stroke={1.5} c='dimmed' />
+              <Text size='sm' c='dimmed'>
+                {t('global.folderDropHint')}
+              </Text>
+            </Stack>
+          </Dropzone.FullScreen>
+        </div>
       )}
     </>
   );

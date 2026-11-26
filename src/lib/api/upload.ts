@@ -107,6 +107,47 @@ export async function getFilename(
   }
 }
 
+export async function getFilenameFromRelativePath(
+  relativePath: string,
+  extension: string,
+  client: DbClient = db,
+): Promise<string> {
+  try {
+    const sanitizedPath = relativePath
+      .split('/')
+      .map((part) => sanitizeFilename(part))
+      .filter((part) => part.length > 0)
+      .join('/');
+
+    if (!sanitizedPath) throw 'invalid file name';
+
+    let existing = await fileNameExists(`${sanitizedPath}${extension}`, client);
+
+    if (existing) {
+      // Add a timestamp to make it unique
+      const timestamp = Date.now().toString(36);
+      const pathParts = sanitizedPath.split('/');
+      const fileName = pathParts.pop() || 'file';
+      const newFileName = `${fileName}-${timestamp}`;
+      pathParts.push(newFileName);
+      const newPath = pathParts.join('/');
+
+      existing = await fileNameExists(`${newPath}${extension}`, client);
+      if (!existing) return newPath;
+    }
+
+    if (`${sanitizedPath}${extension}`.toLowerCase().startsWith('.thumbnail'))
+      throw 'file name uses a reserved prefix';
+
+    return sanitizedPath;
+  } catch (e) {
+    logger.warn(`error generating file name from relative path: ${e}`);
+
+    if (typeof e === 'string') throw e;
+    throw e instanceof URIError ? 'invalid file name: make sure it is URL encoded' : 'invalid file name';
+  }
+}
+
 export function enforceMimetypePolicy(
   mimetype: string,
   context?: string,

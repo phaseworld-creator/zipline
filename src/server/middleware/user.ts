@@ -10,6 +10,14 @@ import { ApiError } from '@/lib/api/errors';
 declare module 'fastify' {
   export interface FastifyRequest {
     user: User;
+    s3User?: User;
+    s3Auth?: {
+      accessKey: string;
+      signature: string;
+      signedHeaders: string;
+      credentialScope: string;
+      date: string;
+    };
   }
 }
 

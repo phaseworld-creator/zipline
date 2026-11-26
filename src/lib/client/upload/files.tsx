@@ -19,13 +19,19 @@ import {
 // "poor mans chunking" if all the files are less than the chunk limit lol
 const FILES_PER_REQUEST = 500;
 
+export interface UploadFileEntry {
+  file: File;
+  relativePath?: string;
+}
+
 export async function uploadFileBatch(
-  files: File[],
+  files: UploadFileEntry[],
   { config, ...context }: UploadContextHandlers & UploadHeadersOptions & { config: SafeConfig },
 ) {
+  const fileList = files.map((f) => f.file);
   const maxBytes = config.chunks.enabled && bytes(config.chunks.max);
-  const partialUploads = maxBytes ? files.filter((file) => file.size >= maxBytes) : [];
-  const normalUploads = maxBytes ? files.filter((file) => file.size < maxBytes) : files;
+  const partialUploads = maxBytes ? fileList.filter((file) => file.size >= maxBytes) : [];
+  const normalUploads = maxBytes ? fileList.filter((file) => file.size < maxBytes) : fileList;
 
   let uploadedNormal: Awaited<ReturnType<typeof uploadFiles>> = null;
   let uploadedPartial: Awaited<ReturnType<typeof uploadPartialFiles>> = null;
@@ -48,7 +54,12 @@ export async function uploadFileBatch(
       });
     }
 
-    uploadedNormal = await uploadFiles(normalUploads, {
+    const normalFilesWithPaths = normalUploads.map((file) => {
+      const entry = files.find((f) => f.file === file);
+      return { file, relativePath: entry?.relativePath };
+    });
+
+    uploadedNormal = await uploadFiles(normalFilesWithPaths, {
       ...context,
       partials: partialUploads.length,
       showResult: false,
@@ -59,7 +70,11 @@ export async function uploadFileBatch(
     partialUploads.length > 0 &&
     (normalUploads.length === 0 || uploadedNormal?.files.length === normalUploads.length)
   ) {
-    uploadedPartial = await uploadPartialFiles(partialUploads, { ...context, config });
+    const partialFilesWithPaths = partialUploads.map((file) => {
+      const entry = files.find((f) => f.file === file);
+      return { file, relativePath: entry?.relativePath };
+    });
+    uploadedPartial = await uploadPartialFiles(partialFilesWithPaths, { ...context, config });
   }
 
   const allFiles = [...(uploadedNormal?.files ?? []), ...(uploadedPartial?.files ?? [])];
@@ -109,7 +124,7 @@ function progressTracker() {
 }
 
 export async function uploadFiles(
-  files: File[],
+  files: UploadFileEntry[],
   {
     setProgress,
     setLoading,
@@ -129,7 +144,7 @@ export async function uploadFiles(
   const partialCount = partials || 0;
 
   const batches = Math.ceil(files.length / FILES_PER_REQUEST);
-  const aggBytes = files.reduce((acc, file) => acc + file.size, 0);
+  const aggBytes = files.reduce((acc, file) => acc + file.file.size, 0);
 
   notifications.show({
     id: 'upload',
@@ -145,12 +160,12 @@ export async function uploadFiles(
   const tracker = progressTracker();
   let lastUpdate = 0;
 
-  const uploadBatch = async (batchFiles: File[], completedBytes: number) =>
+  const uploadBatch = async (batchFiles: UploadFileEntry[], completedBytes: number) =>
     new Promise<Response['/api/upload']>((resolve, reject) => {
       const body = new FormData();
-      const batchBytes = batchFiles.reduce((acc, file) => acc + file.size, 0);
+      const batchBytes = batchFiles.reduce((acc, file) => acc + file.file.size, 0);
 
-      for (let i = 0; i !== batchFiles.length; ++i) body.append('file', batchFiles[i]);
+      for (let i = 0; i !== batchFiles.length; ++i) body.append('file', batchFiles[i].file);
 
       const req = new XMLHttpRequest();
 
@@ -187,7 +202,9 @@ export async function uploadFiles(
       });
 
       req.open('POST', '/api/upload');
-      applyUploadHeaders(req, { options, ephemeral, folder });
+      // Apply headers for the first file in batch (relative path will be per-file)
+      const firstFile = batchFiles[0];
+      applyUploadHeaders(req, { options, ephemeral, folder, relativePath: firstFile.relativePath });
       req.send(body);
     });
 
@@ -199,7 +216,7 @@ export async function uploadFiles(
 
     for (let start = 0, batchIndex = 0; start < files.length; start += FILES_PER_REQUEST, batchIndex++) {
       const batchFiles = files.slice(start, start + FILES_PER_REQUEST);
-      const batchBytes = batchFiles.reduce((acc, file) => acc + file.size, 0);
+      const batchBytes = batchFiles.reduce((acc, file) => acc + file.file.size, 0);
 
       notifications.update({
         title:
@@ -214,7 +231,7 @@ export async function uploadFiles(
 
       const res = await uploadBatch(batchFiles, completedBytes);
       uploadedFiles.push(...res.files);
-      setFiles((prev) => prev.filter((file) => !batchFiles.includes(file)));
+      setFiles((prev) => prev.filter((file) => !batchFiles.some((bf) => bf.file === file)));
 
       completedBytes += batchBytes;
       setProgress(tracker(completedBytes, aggBytes));

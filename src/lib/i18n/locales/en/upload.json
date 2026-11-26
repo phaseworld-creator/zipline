@@ -223,6 +223,7 @@
     "textQueued": "Text ready to upload",
     "textReviewMessage": "Review your text on the upload page before uploading.",
     "queued_one": "{{count}} file ready to upload",
-    "queued_other": "{{count}} files ready to upload"
+    "queued_other": "{{count}} files ready to upload",
+    "folderDropHint": "You can also drop folders to upload entire directory structures"
   }
 }

@@ -32,6 +32,7 @@ export type UploadHeaders = {
   'x-zipline-filename'?: string;
   'x-zipline-domain'?: string;
   'x-zipline-file-extension'?: string;
+  'x-zipline-relative-path'?: string;
 
   'content-range'?: string;
   'x-zipline-p-filename'?: string;
@@ -66,6 +67,7 @@ export type UploadOptions = {
   };
 
   folder?: string;
+  relativePath?: string;
 
   // partials
   partial?: {
@@ -297,6 +299,15 @@ export function parseHeaders(headers: UploadHeaders, fileConfig: Config['files']
   if (returnDomain) {
     const domainArray = returnDomain.split(',');
     response.overrides.returnDomain = domainArray[Math.floor(Math.random() * domainArray.length)].trim();
+  }
+
+  const relativePath = headers['x-zipline-relative-path'];
+  if (relativePath) {
+    try {
+      response.relativePath = decodeURIComponent(relativePath);
+    } catch {
+      throwHeaderError('x-zipline-relative-path', 'Invalid URL-encoded relative path');
+    }
   }
 
   if (headers['content-range']) {

@@ -1,6 +1,6 @@
 import { useConfig } from '@/components/ConfigProvider';
 import { useUploadOptionsStore } from '@/lib/client/store/uploadOptions';
-import { uploadFileBatch } from '@/lib/client/upload/files';
+import { uploadFileBatch, type UploadFileEntry } from '@/lib/client/upload/files';
 import { initialState, useProgress, type UploadProgress } from '@/lib/client/upload/useProgress';
 import { useClipboard } from '@mantine/hooks';
 import { showNotification } from '@mantine/notifications';
@@ -8,11 +8,12 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { useTranslation } from 'react-i18next';
 
 type FileUploadContextType = {
-  files: File[];
-  setFiles: React.Dispatch<React.SetStateAction<File[]>>;
+  files: UploadFileEntry[];
+  setFiles: React.Dispatch<React.SetStateAction<UploadFileEntry[]>>;
   progress: UploadProgress;
   loading: boolean;
-  upload: (files: File[]) => Promise<void>;
+  upload: (files: UploadFileEntry[]) => Promise<void>;
+  uploadFromDataTransfer: (dataTransfer: DataTransfer) => Promise<void>;
 };
 
 const FileUploadContext = createContext<FileUploadContextType | null>(null);
@@ -34,13 +35,13 @@ export default function FileUploadProvider({
   const config = useConfig();
   const clipboard = useClipboard();
   const { t } = useTranslation('upload');
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<UploadFileEntry[]>([]);
   const [progress, setProgress] = useProgress();
   const [pendingUploads, setPendingUploads] = useState(0);
   const queue = useRef(Promise.resolve());
 
   const upload = useCallback(
-    (batch: File[]) => {
+    (batch: UploadFileEntry[]) => {
       if (batch.length === 0) return Promise.resolve();
 
       const { options, ephemeral } = useUploadOptionsStore.getState();
@@ -79,6 +80,21 @@ export default function FileUploadProvider({
     [config, clipboard, folder, setProgress, t],
   );
 
+  const uploadFromDataTransfer = useCallback(
+    async (dataTransfer: DataTransfer) => {
+      const entries = await extractFilesFromDataTransfer(dataTransfer);
+      const uploadEntries: UploadFileEntry[] = entries.map((e) => ({
+        file: e.file,
+        relativePath: e.relativePath,
+      }));
+
+      if (uploadEntries.length > 0) {
+        await upload(uploadEntries);
+      }
+    },
+    [upload],
+  );
+
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (files.length > 0 || pendingUploads > 0) event.preventDefault();
@@ -89,7 +105,9 @@ export default function FileUploadProvider({
   }, [files.length, pendingUploads]);
 
   return (
-    <FileUploadContext.Provider value={{ files, setFiles, progress, loading: pendingUploads > 0, upload }}>
+    <FileUploadContext.Provider
+      value={{ files, setFiles, progress, loading: pendingUploads > 0, upload, uploadFromDataTransfer }}
+    >
       {children}
     </FileUploadContext.Provider>
   );

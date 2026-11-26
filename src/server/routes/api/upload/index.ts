@@ -5,6 +5,7 @@ import {
   getDomain,
   getExtension,
   getFilename,
+  getFilenameFromRelativePath,
   isExtensionDisabled,
   resolveUploadMimetype,
 } from '@/lib/api/upload';
@@ -157,11 +158,13 @@ export default typedPlugin(
           extension: string;
           mimetype: string;
           originalName?: string;
+          relativePath?: string;
         }[] = [];
 
         for (let i = 0; i < multipartFiles.length; i++) {
           const file = multipartFiles[i];
           const extension = getExtension(file.filename, options.overrides?.extension);
+          const relativePath = options.relativePath;
 
           if (isExtensionDisabled(extension))
             throw new ApiError(1006, `file[${i}]: File extension ${extension} is not allowed`);
@@ -194,6 +197,7 @@ export default typedPlugin(
             extension,
             mimetype,
             originalName,
+            relativePath,
           });
         }
 
@@ -239,13 +243,15 @@ export default typedPlugin(
             compressed,
             removedGps,
             originalName,
+            relativePath,
           };
         });
 
         let password: string | undefined;
         if (options.password) password = await hashPassword(options.password);
         const uploads = prepared.map((item) => {
-          const { file, extension, mimetype, size, compressed, removedGps, originalName } = item;
+          const { file, extension, mimetype, size, compressed, removedGps, originalName, relativePath } =
+            item;
 
           const data: Omit<FileInsert, 'name'> = {
             size,
@@ -264,7 +270,7 @@ export default typedPlugin(
 
           data.deletesAt = options.deletesAt && options.deletesAt !== 'never' ? options.deletesAt : null;
 
-          return { compressed, data, extension, file, removedGps, size };
+          return { compressed, data, extension, file, removedGps, size, relativePath };
         });
 
         const fileUploads = await db.transaction(async (tx) => {
@@ -287,13 +293,17 @@ export default typedPlugin(
           for (const [i, upload] of uploads.entries()) {
             let fileName: string;
             try {
-              fileName = await getFilename(
-                format,
-                upload.file.filename,
-                upload.extension,
-                options.overrides?.filename,
-                tx,
-              );
+              if (upload.file.relativePath) {
+                fileName = await getFilenameFromRelativePath(upload.file.relativePath, upload.extension, tx);
+              } else {
+                fileName = await getFilename(
+                  format,
+                  upload.file.filename,
+                  upload.extension,
+                  options.overrides?.filename,
+                  tx,
+                );
+              }
             } catch (error) {
               throw new ApiError(1009, `file[${i}]: ${String(error)}`);
             }

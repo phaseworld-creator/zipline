@@ -6,6 +6,7 @@ import { notifications } from '@mantine/notifications';
 import { IconFileUpload, IconFileXFilled } from '@tabler/icons-react';
 import { applyUploadHeaders, handleUploadResponse, UploadHandlers, UploadHeadersOptions } from './shared';
 import { UploadProgress } from './useProgress';
+import { UploadFileEntry } from './files';
 
 export function progressTracker(size: number) {
   const alpha = 0.2;
@@ -47,7 +48,7 @@ export function progressTracker(size: number) {
 }
 
 export async function uploadPartialFiles(
-  files: File[],
+  files: UploadFileEntry[],
   {
     setProgress,
     setLoading,
@@ -70,7 +71,8 @@ export async function uploadPartialFiles(
 
   try {
     for (let i = 0; i !== files.length; ++i) {
-      const file = files[i];
+      const entry = files[i];
+      const file = entry.file;
       const tracker = progressTracker(file.size);
       const nChunks = Math.ceil(file.size / chunkSize);
       let lastUpdate = 0;
@@ -84,7 +86,7 @@ export async function uploadPartialFiles(
       notifications.show({
         id: 'upload-partial',
         title: fileLabel,
-        message: file.name,
+        message: entry.relativePath || file.name,
         loading: true,
         autoClose: false,
       });
@@ -130,10 +132,10 @@ export async function uploadPartialFiles(
             req.addEventListener('abort', () => reject(new Error(i18n.t('upload:errors.network'))));
 
             req.open('POST', '/api/upload/partial');
-            applyUploadHeaders(req, { options, ephemeral, folder });
+            applyUploadHeaders(req, { options, ephemeral, folder, relativePath: entry.relativePath });
 
             token && req.setRequestHeader('x-zipline-p-token', token);
-            req.setRequestHeader('x-zipline-p-filename', encodeURIComponent(file.name));
+            req.setRequestHeader('x-zipline-p-filename', encodeURIComponent(entry.relativePath || file.name));
             req.setRequestHeader('x-zipline-p-lastchunk', j === nChunks - 1 ? 'true' : 'false');
             req.setRequestHeader('x-zipline-p-content-type', file.type);
             req.setRequestHeader('x-zipline-p-content-length', file.size.toString());
@@ -154,7 +156,7 @@ export async function uploadPartialFiles(
           id: 'upload-partial',
           title: i18n.t('upload:notifications.partial.error.title'),
           message: i18n.t('upload:notifications.partial.error.message', {
-            name: file.name,
+            name: entry.relativePath || file.name,
             error: error instanceof Error ? error.message : i18n.t('upload:errors.unknown'),
           }),
           color: 'red',
@@ -175,7 +177,7 @@ export async function uploadPartialFiles(
         message: isLastFile
           ? i18n.t('upload:notifications.partial.complete.message', { count: uploadedFiles.length })
           : i18n.t('upload:notifications.partial.offloaded.message', {
-              name: file.name,
+              name: entry.relativePath || file.name,
               current: i + 1,
               total: totalFiles,
             }),
