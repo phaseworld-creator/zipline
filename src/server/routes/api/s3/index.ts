@@ -42,19 +42,23 @@ export default typedPlugin(
 
     server.route({
       method: ['GET', 'PUT', 'DELETE', 'HEAD', 'POST'],
-      url: '/*',
+      url: PATH + '/*',
       handler: async (req, res) => {
         const method = req.method;
         const params = req.params as { '*': string };
-        const path = params['*'] || '';
+        const rawPath = params['*'] || '';
         const query = req.query;
 
+        // Strip the /api/s3 prefix from the path
+        const pathPrefix = PATH + '/';
+        const strippedPath = rawPath.startsWith(pathPrefix) ? rawPath.slice(pathPrefix.length) : rawPath;
+
         try {
-          if (method === 'GET' && path === '') {
+          if (method === 'GET' && strippedPath === '') {
             return handleListBuckets(req, res);
           }
 
-          const [bucket, ...keyParts] = path.split('/');
+          const [bucket, ...keyParts] = strippedPath.split('/');
           const key = keyParts.join('/');
 
           if (!bucket) {
@@ -98,7 +102,7 @@ export default typedPlugin(
       },
     });
   },
-  { name: PATH, prefix: PATH },
+  { name: PATH },
 );
 
 interface S3Auth {
