@@ -14,6 +14,9 @@ jobs:
   docker:
     name: Build and push Docker image
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -50,3 +53,4 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             ZIPLINE_GIT_SHA=${{ github.sha }}
+          registry: ghcr.io
