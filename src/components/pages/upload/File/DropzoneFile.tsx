@@ -21,7 +21,7 @@ export default function DropzoneFile({
   loading,
 }: {
   loading: boolean;
-  file: File;
+  file: { file: File; relativePath?: string };
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
@@ -33,7 +33,7 @@ export default function DropzoneFile({
         <Center h='100%'>
           <Group justify='center' gap='xl'>
             <IconFileUpload size={48} />
-            <Text size='md'>{file.name}</Text>
+            <Text size='md'>{file.file.name}</Text>
           </Group>
         </Center>
       </Paper>
@@ -47,7 +47,7 @@ export default function DropzoneFile({
             <Group justify='center' gap='xl'>
               <IconFileUpload size={48} />
               <Text size='md' ff='monospace'>
-                {file.name}
+                {file.file.name}
               </Text>
             </Group>
           </Center>
@@ -57,17 +57,17 @@ export default function DropzoneFile({
         <Stack gap='sm'>
           <ScrollArea h={240} offsetScrollbars type='auto'>
             <Box w='100%' miw={280} style={{ maxWidth: 'min(92vw, 26rem)' }}>
-              <DashboardFileType file={file} show />
+              <DashboardFileType file={file.file} show />
             </Box>
           </ScrollArea>
 
           <Stack gap='xs'>
             <Text size='sm' c='dimmed'>
-              <b>{file.name}</b>
-              {file.type ? ` (${file.type})` : ''}
+              <b>{file.file.name}</b>
+              {file.file.type ? ` (${file.file.type})` : ''}
             </Text>
             <Text size='sm' c='dimmed'>
-              {bytes(file.size)}
+              {bytes(file.file.size)}
             </Text>
             <Button
               size='compact-sm'

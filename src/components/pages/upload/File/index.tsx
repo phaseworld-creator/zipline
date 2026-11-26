@@ -43,17 +43,19 @@ export default function UploadFile({ title, folder }: { title?: string; folder?:
   const visibleFiles = files.slice(0, visibleCount);
   const hiddenFiles = Math.max(0, files.length - visibleFiles.length);
 
-  const aggSize = files.reduce((acc, file) => acc + file.size, 0);
+  const aggSize = files.reduce((acc, file) => acc + file.file.size, 0);
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
-      const files = getPastedContent(event)?.files.filter((file) => file.type.startsWith('image/')) ?? [];
-      if (files.length === 0) return;
+      const pastedFiles =
+        getPastedContent(event)?.files.filter((file) => file.type.startsWith('image/')) ?? [];
+      if (pastedFiles.length === 0) return;
 
       event.preventDefault();
-      setFiles((prev) => [...prev, ...files]);
+      const entries = pastedFiles.map((file) => ({ file, relativePath: file.name }));
+      setFiles((prev) => [...entries, ...prev]);
       setVisibleCount(initialVisible);
-      for (const file of files) {
+      for (const file of pastedFiles) {
         showNotification({
           message: t('file.notifications.pasted.message', { name: file.name }),
           color: 'blue',
@@ -87,7 +89,8 @@ export default function UploadFile({ title, folder }: { title?: string; folder?:
 
       <Dropzone
         onDrop={(f) => {
-          setFiles((prev) => [...f, ...prev]);
+          const entries = f.map((file) => ({ file, relativePath: file.name }));
+          setFiles((prev) => [...entries, ...prev]);
           setVisibleCount(initialVisible);
         }}
         my='sm'

@@ -80,8 +80,9 @@ export default function UploadText({ initialText }: { initialText?: string }) {
 
   const upload = async () => {
     const fileBlobs = createTextFiles(files, codeMap);
+    const entries = fileBlobs.map((file) => ({ file, relativePath: file.name }));
 
-    await uploadFiles(fileBlobs, {
+    await uploadFiles(entries, {
       clipboard,
       setFiles: () => {},
       setLoading,

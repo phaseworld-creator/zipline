@@ -2,6 +2,7 @@ import { useConfig } from '@/components/ConfigProvider';
 import { useUploadOptionsStore } from '@/lib/client/store/uploadOptions';
 import { uploadFileBatch, type UploadFileEntry } from '@/lib/client/upload/files';
 import { initialState, useProgress, type UploadProgress } from '@/lib/client/upload/useProgress';
+import { extractFilesFromDataTransfer } from '@/lib/client/upload/folder';
 import { useClipboard } from '@mantine/hooks';
 import { showNotification } from '@mantine/notifications';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';

@@ -4,7 +4,6 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 import { getUserByToken } from '@/lib/db/models/user';
 import { log } from '@/lib/logger';
-import { TypedError } from '@fastify/error';
 import { eq } from 'drizzle-orm';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { Readable } from 'node:stream';
@@ -32,8 +31,8 @@ export default typedPlugin(
         throw new S3Error(401, 'InvalidAccessKeyId', 'Invalid access key');
       }
 
-      req.s3User = user;
-      req.s3Auth = parseAuthHeader(authHeader);
+      (req as any).s3User = user;
+      (req as any).s3Auth = parseAuthHeader(authHeader);
 
       // Verify signature
       if (!verifySignature(req, config.core.secret)) {
@@ -45,11 +44,12 @@ export default typedPlugin(
       method: ['GET', 'PUT', 'DELETE', 'HEAD', 'POST'],
       url: '/*',
       handler: async (req, res) => {
-        const { method, params, query } = req;
+        const method = req.method;
+        const params = req.params as { '*': string };
+        const path = params['*'] || '';
+        const query = req.query;
 
         try {
-          const path = params['*'] || '';
-
           if (method === 'GET' && path === '') {
             return handleListBuckets(req, res);
           }
@@ -78,13 +78,13 @@ export default typedPlugin(
             case 'GET':
               return handleGetObject(req, res, bucket, key, query);
             case 'PUT':
-              return handlePutObject(req, res, bucket, key, headers, body);
+              return handlePutObject(req, res, bucket, key);
             case 'DELETE':
               return handleDeleteObject(req, res, bucket, key);
             case 'HEAD':
               return handleHeadObject(req, res, bucket, key);
             case 'POST':
-              return handlePostObject(req, res, bucket, key, query, headers, body);
+              return handlePostObject(req, res, bucket, key, query);
           }
 
           throw new S3Error(405, 'MethodNotAllowed', 'Method not allowed');
@@ -360,12 +360,14 @@ async function handleGetObject(req: any, res: any, bucket: string, key: string, 
   return res.send(stream);
 }
 
-async function handlePutObject(req: any, res: any, bucket: string, key: string, headers: any, body: any) {
-  const user = req.s3User!;
+async function handlePutObject(req: any, res: any, bucket: string, key: string) {
+  const user = (req as any).s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot access bucket for another user');
   }
 
+  const headers = req.headers;
+  const body = req.body;
   const mimetype = headers['content-type'] || 'application/octet-stream';
 
   if (body instanceof Readable) {
@@ -383,7 +385,7 @@ async function handlePutObject(req: any, res: any, bucket: string, key: string, 
 }
 
 async function handleDeleteObject(req: any, res: any, bucket: string, key: string) {
-  const user = req.s3User!;
+  const user = (req as any).s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot access bucket for another user');
   }
@@ -393,7 +395,7 @@ async function handleDeleteObject(req: any, res: any, bucket: string, key: strin
 }
 
 async function handleHeadObject(req: any, res: any, bucket: string, key: string) {
-  const user = req.s3User!;
+  const user = (req as any).s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot access bucket for another user');
   }
@@ -413,30 +415,22 @@ async function handleHeadObject(req: any, res: any, bucket: string, key: string)
     .send('');
 }
 
-async function handlePostObject(
-  req: any,
-  res: any,
-  bucket: string,
-  key: string,
-  query: any,
-  headers: any,
-  body: any,
-) {
-  const user = req.s3User!;
+async function handlePostObject(req: any, res: any, bucket: string, key: string, query: any) {
+  const user = (req as any).s3User!;
   if (bucket !== user.id) {
     throw new S3Error(403, 'AccessDenied', 'Cannot access bucket for another user');
   }
 
   if (query.uploads) {
-    return handleCreateMultipartUpload(req, res, bucket, key, headers);
+    return handleCreateMultipartUpload(req, res, bucket, key);
   }
 
   if (query.partNumber && query.uploadId) {
-    return handleUploadPart(req, res, bucket, key, query, headers, body);
+    return handleUploadPart(req, res, bucket, key, query);
   }
 
   if (query.uploadId && query['x-amz-mp-object']) {
-    return handleCompleteMultipartUpload(req, res, bucket, key, query, headers, body);
+    return handleCompleteMultipartUpload(req, res, bucket, key, query);
   }
 
   throw new S3Error(400, 'InvalidRequest', 'Invalid multipart upload request');
@@ -452,17 +446,12 @@ async function handleCreateMultipartUpload(req: any, res: any, bucket: string, k
 </InitiateMultipartUploadResult>`);
 }
 
-async function handleUploadPart(
-  req: any,
-  res: any,
-  bucket: string,
-  key: string,
-  query: any,
-  headers: any,
-  body: any,
-) {
+async function handleUploadPart(req: any, res: any, bucket: string, key: string, query: any) {
   const partNumber = parseInt(query.partNumber, 10);
   const uploadId = query.uploadId;
+
+  const _headers = req.headers;
+  const body = req.body;
 
   if (body instanceof Readable) {
     const chunks: Buffer[] = [];
@@ -513,7 +502,7 @@ async function handleCompleteMultipartUpload(req: any, res: any, bucket: string,
 </CompleteMultipartUploadResult>`);
 }
 
-class S3Error extends TypedError {
+class S3Error extends Error {
   code: string;
   statusCode: number;
 

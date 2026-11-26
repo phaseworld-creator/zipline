@@ -34,13 +34,18 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
 
   const dropRef = useRef<HTMLDivElement>(null);
 
+  const filesToEntries = useCallback((files: File[]): { file: File; relativePath?: string }[] => {
+    return files.map((file) => ({ file, relativePath: file.name }));
+  }, []);
+
   const receiveFiles = useCallback(
     (files: File[], behavior: UploadBehavior) => {
       if (isUploadPage || files.length === 0 || behavior === 'disabled') return;
 
-      setFiles((prev) => [...files, ...prev]);
+      const entries = filesToEntries(files);
+      setFiles((prev) => [...entries, ...prev]);
       if (behavior === 'upload') {
-        upload(files);
+        upload(entries);
       } else {
         showNotification({
           title: t('global.queued', { count: files.length }),
@@ -51,7 +56,7 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
         navigate('/dashboard/upload/file');
       }
     },
-    [isUploadPage, setFiles, upload, navigate, t],
+    [isUploadPage, setFiles, upload, navigate, t, filesToEntries],
   );
 
   const handleDrop = useCallback(
@@ -103,7 +108,8 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
 
       event.preventDefault();
       if (pasteBehavior === 'upload') {
-        receiveFiles(createTextFiles([{ text, lang: 'txt' }], codeMap), pasteBehavior);
+        const textFiles = createTextFiles([{ text, lang: 'txt' }], codeMap);
+        receiveFiles(textFiles, pasteBehavior);
       } else {
         showNotification({
           title: t('global.textQueued'),
@@ -144,7 +150,7 @@ function DashboardUploadCapture({ children }: { children: React.ReactNode }) {
               <Text size='sm' c='dimmed'>
                 {t('global.savedOptions')}
               </Text>
-              <IconFolder size='1.5rem' stroke={1.5} c='dimmed' />
+              <IconFolder size='1.5rem' stroke={1.5} color='dimmed' />
               <Text size='sm' c='dimmed'>
                 {t('global.folderDropHint')}
               </Text>
